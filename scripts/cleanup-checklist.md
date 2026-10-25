@@ -1,0 +1,11 @@
+# AWS cleanup checklist
+- Verify account and region before deleting resources.
+- Delete Auto Scaling groups and compute resources.
+- Delete ALB and target groups.
+- Delete NAT Gateways and release unused Elastic IPs.
+- Back up needed data, then delete test RDS instances if no longer needed.
+- Empty and delete the project S3 bucket if appropriate.
+- Delete test Lambda, SQS, SNS, EventBridge, and CloudWatch resources.
+- Delete CloudFormation stacks in dependency order.
+- Check for leftover EBS volumes, snapshots, Elastic IPs, NAT Gateways, and load balancers.
+- Review Billing and Cost Explorer.

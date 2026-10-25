@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TalentFlow AI | Careers</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+  <a class="brand" href="/">TalentFlow <span>AI</span></a>
+  <span class="note">Student-built recruitment demo</span>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow">FIND YOUR NEXT OPPORTUNITY</p>
+    <h1>Build your future<br><span>with the right team.</span></h1>
+    <p class="muted">Explore sample roles and submit a test application.</p>
+    <a class="button" href="#jobs">Explore open roles</a>
+  </section>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <section>
+        {% for category, message in messages %}
+          <p class="message {{ category }}">{{ message }}</p>
+        {% endfor %}
+      </section>
+    {% endif %}
+  {% endwith %}
+
+  <section id="jobs">
+    <p class="eyebrow">OPPORTUNITIES</p>
+    <h2>Open positions</h2>
+    <div class="jobs">
+      {% for job in jobs %}
+        <article class="job">
+          <div>
+            <h3>{{ job.title }}</h3>
+            <p class="muted">{{ job.team }} · {{ job.location }} · {{ job.kind }}</p>
+          </div>
+          <a href="#apply">Apply ↗</a>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section id="apply" class="apply">
+    <div>
+      <p class="eyebrow">TAKE THE NEXT STEP</p>
+      <h2>Apply for a role</h2>
+      <p class="muted">Use fictional test information only. Applications are saved locally.</p>
+    </div>
+
+    <form action="/apply" method="post" enctype="multipart/form-data">
+      <label for="full_name">Full name</label>
+      <input id="full_name" name="full_name" required maxlength="100" placeholder="Sample Candidate">
+
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" required placeholder="sample@example.com">
+
+      <label for="job_title">Position</label>
+      <select id="job_title" name="job_title" required>
+        <option value="">Choose a role</option>
+        {% for job in jobs %}
+          <option value="{{ job.title }}">{{ job.title }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="resume">Resume (PDF/DOC/DOCX, max 5 MB)</label>
+      <input id="resume" name="resume" type="file" accept=".pdf,.doc,.docx">
+
+      <button type="submit">Submit sample application</button>
+      <small>Do not upload real resumes or sensitive information.</small>
+    </form>
+  </section>
+</main>
+
+<footer>
+  <span>TalentFlow AI</span>
+  <span>Sample project by Shree Dhadge</span>
+</footer>
+</body>
+</html>

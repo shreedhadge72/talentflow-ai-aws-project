@@ -1,0 +1,1 @@
+Save genuine screenshots of your own tested resources here. Do not include secrets.\n

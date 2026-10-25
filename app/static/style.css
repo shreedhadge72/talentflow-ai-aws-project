@@ -1,0 +1,89 @@
+:root {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #172033;
+  background: #f5f7fb;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 8%;
+  background: #fff;
+}
+.brand {
+  font-size: 24px;
+  font-weight: 800;
+  color: #172033;
+  text-decoration: none;
+}
+.brand span, h1 span { color: #5267e8; }
+.note, .muted, small { color: #657087; }
+main { max-width: 1100px; margin: auto; padding: 30px 24px 60px; }
+.hero {
+  background: #e9edff;
+  padding: 65px 8%;
+  border-radius: 20px;
+  margin: 20px 0 50px;
+}
+.eyebrow {
+  color: #5267e8;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+h1 { font-size: clamp(36px, 6vw, 62px); line-height: 1.1; margin: 18px 0; }
+h2 { font-size: 30px; }
+.button, button {
+  display: inline-block;
+  background: #5267e8;
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 13px 20px;
+  text-decoration: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+.jobs { display: grid; gap: 14px; }
+.job {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 22px;
+  background: #fff;
+  border: 1px solid #e2e6f0;
+  border-radius: 12px;
+}
+.job h3 { margin: 0 0 8px; }
+.job p { margin: 0; }
+.job a { color: #5267e8; font-weight: bold; }
+.apply {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 35px;
+  margin-top: 60px;
+  padding: 30px;
+  background: #fff;
+  border-radius: 16px;
+}
+form { display: grid; gap: 10px; }
+input, select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccd2df;
+  border-radius: 7px;
+  background: white;
+}
+.message { padding: 12px; border-radius: 8px; }
+.success { background: #e1f8e9; color: #176b36; }
+.error { background: #ffe6e6; color: #a32121; }
+footer { color: #657087; font-size: 14px; }
+@media (max-width: 700px) {
+  header, footer { padding: 18px 5%; gap: 12px; flex-wrap: wrap; }
+  .apply { grid-template-columns: 1fr; }
+  .job { align-items: flex-start; }
+  .hero { padding: 40px 7%; }
+}

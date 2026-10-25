@@ -1,0 +1,1 @@
+Add a resume-processing Lambda only after S3 and SQS are configured. Verify a real test invocation and logs before claiming it works.\n
