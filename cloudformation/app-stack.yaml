@@ -1,0 +1,182 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  TalentFlow AI demo web application on EC2 using Docker.
+  Created for Shree Dhadge.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: talentflow-ai
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9-]*$"
+    Description: Prefix used for resource names.
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues:
+      - t3.micro
+      - t3.small
+    Description: EC2 instance size. Charges may apply.
+
+  GitHubRepoUrl:
+    Type: String
+    Default: https://github.com/shreedhadge72/talentflow-ai-aws-project.git
+    Description: Public GitHub repository containing the application.
+
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: Latest Amazon Linux 2023 x86_64 AMI.
+
+Resources:
+  TalentFlowVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.20.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-vpc"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-igw"
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref TalentFlowVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref TalentFlowVPC
+      CidrBlock: 10.20.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-subnet"
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref TalentFlowVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-rt"
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow public HTTP access to TalentFlow demo
+      VpcId: !Ref TalentFlowVPC
+      SecurityGroupIngress:
+        - Description: Public website HTTP
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-web-sg"
+
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-ec2-role"
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2Role
+
+  TalentFlowInstance:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - PublicRoute
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      NetworkInterfaces:
+        - DeviceIndex: "0"
+          AssociatePublicIpAddress: true
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !Ref AppSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+            VolumeType: gp3
+            Encrypted: true
+            DeleteOnTermination: true
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euxo pipefail
+          dnf install -y docker git
+          systemctl enable --now docker
+          systemctl enable --now amazon-ssm-agent || true
+          git clone --depth 1 --branch main ${GitHubRepoUrl} /opt/talentflow
+          docker build -t talentflow-ai /opt/talentflow
+          docker run -d \
+            --name talentflow-ai \
+            --restart unless-stopped \
+            -p 80:5000 \
+            talentflow-ai
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-web-server"
+        - Key: Project
+          Value: TalentFlowAI
+
+Outputs:
+  WebsiteURL:
+    Description: Public URL for the TalentFlow website
+    Value: !Sub "http://${TalentFlowInstance.PublicIp}"
+
+  InstanceId:
+    Description: EC2 instance ID
+    Value: !Ref TalentFlowInstance
+
+  PublicIP:
+    Description: EC2 public IPv4 address
+    Value: !GetAtt TalentFlowInstance.PublicIp
+
+  VPCId:
+    Description: Created VPC ID
+    Value: !Ref TalentFlowVPC
