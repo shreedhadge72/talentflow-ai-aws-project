@@ -1,14 +1,12 @@
-AWSTemplateFormatVersion: "2010-09-09"
-Description: >
-  TalentFlow AI demo web application on EC2 using Docker.
-  Created for Shree Dhadge.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: TalentFlow AI demo - public EC2 application using Docker
 
 Parameters:
   ProjectName:
     Type: String
     Default: talentflow-ai
-    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9-]*$"
-    Description: Prefix used for resource names.
+    AllowedPattern: '^[a-zA-Z][a-zA-Z0-9-]*$'
+    Description: Short project name
 
   InstanceType:
     Type: String
@@ -16,17 +14,17 @@ Parameters:
     AllowedValues:
       - t3.micro
       - t3.small
-    Description: EC2 instance size. Charges may apply.
+    Description: EC2 instance type
 
   GitHubRepoUrl:
     Type: String
     Default: https://github.com/shreedhadge72/talentflow-ai-aws-project.git
-    Description: Public GitHub repository containing the application.
+    Description: Public GitHub repository URL containing the Dockerfile
 
   LatestAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
-    Description: Latest Amazon Linux 2023 x86_64 AMI.
+    Description: Latest Amazon Linux 2023 AMI ID
 
 Resources:
   TalentFlowVPC:
@@ -37,73 +35,78 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: !Sub "${ProjectName}-vpc"
+          Value: !Sub '${ProjectName}-vpc'
 
-  InternetGateway:
+  TalentFlowInternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub "${ProjectName}-igw"
+          Value: !Sub '${ProjectName}-igw'
 
-  InternetGatewayAttachment:
+  AttachInternetGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref TalentFlowVPC
-      InternetGatewayId: !Ref InternetGateway
+      InternetGatewayId: !Ref TalentFlowInternetGateway
 
-  PublicSubnet:
+  TalentFlowPublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref TalentFlowVPC
       CidrBlock: 10.20.1.0/24
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub "${ProjectName}-public-subnet"
+          Value: !Sub '${ProjectName}-public-subnet'
 
-  PublicRouteTable:
+  TalentFlowRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref TalentFlowVPC
       Tags:
         - Key: Name
-          Value: !Sub "${ProjectName}-public-rt"
+          Value: !Sub '${ProjectName}-public-rt'
 
-  PublicRoute:
+  TalentFlowDefaultRoute:
     Type: AWS::EC2::Route
-    DependsOn: InternetGatewayAttachment
+    DependsOn: AttachInternetGateway
     Properties:
-      RouteTableId: !Ref PublicRouteTable
+      RouteTableId: !Ref TalentFlowRouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
+      GatewayId: !Ref TalentFlowInternetGateway
 
-  PublicSubnetRouteTableAssociation:
+  TalentFlowSubnetRouteAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnet
-      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref TalentFlowPublicSubnet
+      RouteTableId: !Ref TalentFlowRouteTable
 
-  AppSecurityGroup:
+  TalentFlowSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow public HTTP access to TalentFlow demo
+      GroupDescription: Allow public HTTP access to the demo website
       VpcId: !Ref TalentFlowVPC
       SecurityGroupIngress:
-        - Description: Public website HTTP
-          IpProtocol: tcp
+        - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: !Sub "${ProjectName}-web-sg"
+          Value: !Sub '${ProjectName}-web-sg'
 
-  EC2Role:
+  TalentFlowEC2Role:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -115,28 +118,27 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
       Tags:
         - Key: Name
-          Value: !Sub "${ProjectName}-ec2-role"
+          Value: !Sub '${ProjectName}-ec2-role'
 
-  EC2InstanceProfile:
+  TalentFlowInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Roles:
-        - !Ref EC2Role
+        - !Ref TalentFlowEC2Role
 
-  TalentFlowInstance:
+  TalentFlowEC2Instance:
     Type: AWS::EC2::Instance
     DependsOn:
-      - PublicRoute
+      - TalentFlowSubnetRouteAssociation
     Properties:
       ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
-      IamInstanceProfile: !Ref EC2InstanceProfile
-      NetworkInterfaces:
-        - DeviceIndex: "0"
-          AssociatePublicIpAddress: true
-          SubnetId: !Ref PublicSubnet
-          GroupSet:
-            - !Ref AppSecurityGroup
+      IamInstanceProfile: !Ref TalentFlowInstanceProfile
+      SubnetId: !Ref TalentFlowPublicSubnet
+      SecurityGroupIds:
+        - !Ref TalentFlowSecurityGroup
+      MetadataOptions:
+        HttpTokens: required
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
@@ -148,35 +150,39 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash
           set -euxo pipefail
+          exec > >(tee /var/log/talentflow-bootstrap.log | logger -t user-data -s 2>/dev/console) 2>&1
+
+          dnf update -y
           dnf install -y docker git
           systemctl enable --now docker
-          systemctl enable --now amazon-ssm-agent || true
+
           git clone --depth 1 --branch main ${GitHubRepoUrl} /opt/talentflow
-          docker build -t talentflow-ai /opt/talentflow
+          cd /opt/talentflow
+
+          docker build -t talentflow-ai .
           docker run -d \
-            --name talentflow-ai \
             --restart unless-stopped \
+            --name talentflow-ai \
             -p 80:5000 \
             talentflow-ai
+
       Tags:
         - Key: Name
-          Value: !Sub "${ProjectName}-web-server"
-        - Key: Project
-          Value: TalentFlowAI
+          Value: !Sub '${ProjectName}-web-server'
 
 Outputs:
   WebsiteURL:
-    Description: Public URL for the TalentFlow website
-    Value: !Sub "http://${TalentFlowInstance.PublicIp}"
+    Description: Public URL of the TalentFlow AI website
+    Value: !Sub 'http://${TalentFlowEC2Instance.PublicIp}'
 
   InstanceId:
     Description: EC2 instance ID
-    Value: !Ref TalentFlowInstance
+    Value: !Ref TalentFlowEC2Instance
 
   PublicIP:
-    Description: EC2 public IPv4 address
-    Value: !GetAtt TalentFlowInstance.PublicIp
+    Description: Public IPv4 address of the EC2 instance
+    Value: !GetAtt TalentFlowEC2Instance.PublicIp
 
   VPCId:
-    Description: Created VPC ID
+    Description: VPC ID
     Value: !Ref TalentFlowVPC
