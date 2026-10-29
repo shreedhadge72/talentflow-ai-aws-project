@@ -76,7 +76,7 @@ and application monitoring.
 
 ## Architecture
 
-![TalentFlow AI AWS Architecture](docs/diagrams/architecture.png)
+![TalentFlow AI AWS Architecture](docs/diagrams/Architecture.png)
 
 ## AWS Services
 
