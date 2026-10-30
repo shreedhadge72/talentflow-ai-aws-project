@@ -132,4 +132,3 @@ environment files or personal candidate data.
 ## Author
 
 Shree Dhadge
->>>>>>> f87107313eb8ac36c3b4112d4e4d75a03d49f167
