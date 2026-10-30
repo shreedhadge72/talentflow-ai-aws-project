@@ -14,7 +14,7 @@ Parameters:
     AllowedValues:
       - t3.micro
       - t3.small
-    Description: EC2 instance type
+    Description: EC2 instance Type
 
   GitHubRepoUrl:
     Type: String
